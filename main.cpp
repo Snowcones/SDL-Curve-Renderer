@@ -9,7 +9,7 @@ const int DRAW_WIDTH = 400;
 const int SCREEN_HEIGHT = 480;
 const int DRAW_HEIGHT = 400;
 const int DOT_WIDTH = 10;
-const int BALL_WIDTH = 20;
+const int BALL_WIDTH = 7;
 const float G = 9.8;
 
 struct trackObj
@@ -34,7 +34,7 @@ void drawCurve(SDL_Renderer* renderer, trackObj track);
 void drawCurves(SDL_Renderer* renderer, std::vector<trackObj> track);
 void genArcTrack(float maxDeflection, float width, float height, int res, trackObj& track);
 void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, float m, float I, bool graphical, std::vector<float>& trackTimes);
-
+void SDL_DrawStripedCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY, float theta);
 
 
 int main(int argc, const char * argv[]) {
@@ -52,7 +52,7 @@ int main(int argc, const char * argv[]) {
     else
     {
         //Create window
-        window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+        window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
         if( window == NULL )
         {
             printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
@@ -76,14 +76,17 @@ int main(int argc, const char * argv[]) {
     tracks.resize(11);
     for (int i=0; i<11; i++) {
         float defl=(i-5)/5.0*.3;
-        genArcTrack(defl, 1000, 1000, 20, tracks[i]);
+        genArcTrack(defl, 40, 40, 20, tracks[i]);
     }
     std::vector<float> times;
     times.resize(11);
-    runSim(gRenderer, tracks, 1, 1, NULL, true, times);
+    runSim(gRenderer, tracks, 1, 1, 0, true, times);
     for (int i=0; i<11; i++) {
         printf("Time %d: %f\n", i, times[i]);
     }
+    
+    int testTimer=0;
+    
     while (!quit)
     {
         //Handle events on queue
@@ -96,10 +99,12 @@ int main(int argc, const char * argv[]) {
             }
         }
         
+        testTimer++;
         //Clear screen
         SDL_SetRenderDrawColor( gRenderer, 0, 0, 0, 0);
         SDL_RenderClear( gRenderer );
         
+        SDL_SetRenderDrawColor( gRenderer, 255, 255, 255, 255);
         
         //Draw data
         drawCurves(gRenderer, tracks);
@@ -132,13 +137,45 @@ void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float c
     }
 }
 
+void SDL_DrawCircle2(SDL_Renderer* renderer, float radius, float centerX, float centerY)
+{
+    int pixelArea=radius*radius;
+    int pixelCount=0;
+    SDL_Point* pointData=(SDL_Point*)malloc(sizeof(SDL_Point)*pixelArea);
+    for (int y=0; y<radius+.5; y++)
+    {
+        for (int x=0; x<sqrtf(radius-y*y)+.5; x++)
+        {
+            pointData[pixelCount]={(int)centerX+x, (int)centerY+y};
+            pointData[pixelCount+1]={(int)centerX-x, (int)centerY+y};
+            pointData[pixelCount+2]={(int)centerX+x, (int)centerY-y};
+            pointData[pixelCount+3]={(int)centerX-x, (int)centerY-y};
+            pixelCount+=4;
+        }
+    }
+    SDL_RenderDrawPoints(renderer, pointData, pixelCount);
+}
+
+void SDL_DrawCircle3(SDL_Renderer* renderer, float radius, float centerX, float centerY)
+{
+    int pixelArea=radius*radius;
+    int pixelCount=0;
+    SDL_Point* pointData=(SDL_Point*)malloc(sizeof(SDL_Point)*pixelArea);
+    for (int y=0; y<radius+.5; y++)
+    {
+        int x=sqrtf(radius*radius-y*y);
+        SDL_RenderDrawLine(renderer, -x+centerX, y+centerY, x+centerX, y+centerY);
+        SDL_RenderDrawLine(renderer, -x+centerX, -y+centerY, x+centerX, -y+centerY);
+    }
+    SDL_RenderDrawPoints(renderer, pointData, pixelCount);
+}
+
 void SDL_DrawStripedCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY, float theta)
 {
-    SDL_DrawCircle(renderer, radius, centerX, centerY);
+    SDL_DrawCircle3(renderer, radius, centerX, centerY);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    theta*=-1;
-    SDL_RenderDrawLine(renderer, centerX+radius*cosf(theta), centerY+radius+sinf(theta), centerX+radius-cosf(theta), centerY-radius*sinf(theta));
-    SDL_RenderDrawLine(renderer, centerX+radius*sinf(theta), centerY+radius*cosf(theta), centerX-radius*sinf(theta), centerY-radius*cosf(theta));
+    SDL_RenderDrawLine(renderer, centerX+radius*cosf(theta), centerY+radius*sinf(theta), centerX-radius*cosf(theta), centerY-radius*sinf(theta));
+    //SDL_RenderDrawLine(renderer, centerX+radius*sinf(theta), centerY-radius*cosf(theta), centerX-radius*sinf(theta), centerY+radius*cosf(theta));
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 }
 
@@ -146,7 +183,7 @@ void SDL_DrawStripedCircle(SDL_Renderer* renderer, float radius, float centerX, 
 
 void drawCurve(SDL_Renderer* renderer, trackObj track)
 {
-    float distBetweenPointsInPixels=DRAW_WIDTH/track.heightList.size();
+    float distBetweenPointsInPixels=DRAW_WIDTH/(track.heightList.size()-1);
     float drawBorderX=(SCREEN_WIDTH-DRAW_WIDTH)/2;
     float drawBorderY=(SCREEN_HEIGHT-DRAW_HEIGHT)/2;
     //Draw Dots
@@ -251,9 +288,11 @@ void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, f
         progList.resize(trackList.size());
         float deltaT=1.0/60;
         bool running=true;
+        SDL_Texture *display = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, SCREEN_WIDTH, SCREEN_HEIGHT);
+    
         while (ballsRunning>0&&running)
         {
-            
+            SDL_SetRenderTarget(renderer, display);
             while( SDL_PollEvent(&e) != 0 )
             {
                 //User requests quit
@@ -265,6 +304,10 @@ void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, f
             
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL_RenderClear(renderer);
+            SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+            SDL_Rect drawRect={(SCREEN_WIDTH-DRAW_WIDTH)/2, (SCREEN_HEIGHT-DRAW_HEIGHT)/2, DRAW_WIDTH, DRAW_HEIGHT};
+            //SDL_RenderDrawRect(renderer, &drawRect);
+            
             
             for (int trackNum=0; trackNum<trackList.size(); trackNum++)
             {
@@ -278,15 +321,18 @@ void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, f
                     float ballRealRadius=thisTrack.height/DRAW_HEIGHT*BALL_WIDTH;
                     float ballX=0;
                     float ballY=0;
+                    float dY=0;
+                    float dX=0;
+                    float segLength=0;
                     while (tRemaining>0)
                     {
                         float thisX=(float)point/(thisTrack.heightList.size()-1)*thisTrack.width;
                         float thisY=thisTrack.heightList[point]*thisTrack.height;
                         float nextX=(float)(point+1)/(thisTrack.heightList.size()-1)*thisTrack.width;
                         float nextY=thisTrack.heightList[point+1]*thisTrack.height;
-                        float dY=nextY-thisY;
-                        float dX=nextX-thisX;
-                        float segLength=sqrtf(dX*dX+dY*dY);
+                        dY=nextY-thisY;
+                        dX=nextX-thisX;
+                        segLength=sqrtf(dX*dX+dY*dY);
                         float segLengthRemaining=segLength-thisProg.p;
                         float accelOnSegment=(dY/segLength)*m*G/(m+I/(r*r));
                         float radicand=thisProg.v*thisProg.v-2*accelOnSegment*segLengthRemaining;
@@ -318,7 +364,6 @@ void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, f
                             {
                                 thisProg.running=false;
                                 ballsRunning--;
-                                printf("%d\n", ballsRunning);
                             }
                             
                         }
@@ -327,18 +372,27 @@ void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, f
                             float distMoved=thisProg.v*tRemaining-.5*accelOnSegment*tRemaining*tRemaining;
                             thisProg.p+=distMoved;
                             thisProg.t+=distMoved/ballRealRadius;
-                            thisProg.v+=correctTime*(-1*accelOnSegment);
+                            thisProg.v+=tRemaining*(-1*accelOnSegment);
                             tRemaining=0;
                         }
+                        
+                        thisX=(float)thisProg.segment/(thisTrack.heightList.size()-1)*thisTrack.width;
+                        thisY=thisTrack.heightList[thisProg.segment]*thisTrack.height;
+                        
                         ballX=(thisProg.p*dX/segLength+thisX)*DRAW_WIDTH/thisTrack.width+(SCREEN_WIDTH-DRAW_WIDTH)/2;
                         ballY=(thisTrack.height-thisProg.p*dY/segLength-thisY)*DRAW_HEIGHT/thisTrack.height+(SCREEN_HEIGHT-DRAW_WIDTH)/2;
                     }
-                    SDL_DrawStripedCircle(renderer, BALL_WIDTH, ballX, ballY, thisProg.t);
-                    
+                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                    SDL_DrawStripedCircle(renderer, BALL_WIDTH, ballX-dY/segLength*BALL_WIDTH, ballY-dX/segLength*BALL_WIDTH, thisProg.t);
                 }
             }
+            
             drawCurves(renderer, trackList);
+            
+            SDL_SetRenderTarget(renderer, NULL);
+            SDL_RenderCopy(renderer, display, NULL, NULL);
             SDL_RenderPresent(renderer);
+            
         }
     //}
     
