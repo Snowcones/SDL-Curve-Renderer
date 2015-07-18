@@ -3,22 +3,9 @@
 #include <stdio.h>
 #include <vector>
 #include <sys/time.h>
+#include "drawing.h"
 
-const int SCREEN_WIDTH = 640;
-const int DRAW_WIDTH = 400;
-const int SCREEN_HEIGHT = 480;
-const int DRAW_HEIGHT = 400;
-const int DOT_WIDTH = 10;
-const int BALL_WIDTH = 7;
 const float G = 9.8;
-
-struct trackObj
-{
-    //Height List is normalized
-    std::vector<float> heightList;
-    float height;
-    float width;
-};
 
 struct trackSimProgress
 {
@@ -29,13 +16,22 @@ struct trackSimProgress
     float t=0;
 };
 
-void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY);
-void drawCurve(SDL_Renderer* renderer, trackObj track);
-void drawCurves(SDL_Renderer* renderer, std::vector<trackObj> track);
 void genArcTrack(float maxDeflection, float width, float height, int res, trackObj& track);
 void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, float m, float I, bool graphical, std::vector<float>& trackTimes);
-void SDL_DrawStripedCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY, float theta);
 
+float getXPosAtAnchor(trackObj& track, int segment);
+float getYPosAtAnchor(trackObj& track, int segment);
+float getXPosAlongTrack(trackObj& track, int segment, float distanceFromSegStart);
+float getYPosAlongTrack(trackObj& track, int segment, float distanceFromSegStart);
+float getTrackSegLength(trackObj& track, int seg);
+
+void printTimes(std::vector<float> timeList)
+{
+    for (int i=0; i<timeList.size(); i++)
+    {
+        printf("Track %d: %.3fs\n", i, timeList[i]);
+    }
+}
 
 int main(int argc, const char * argv[]) {
 
@@ -67,153 +63,42 @@ int main(int argc, const char * argv[]) {
         }
     }
     
-    //Test data
-//    trackObj testTrack;
-//    genArcTrack(.3, 1, 1, 20, testTrack);
-//    //1-sqrtf(2)/2
-    
     std::vector<trackObj> tracks;
     tracks.resize(11);
     for (int i=0; i<11; i++) {
-        float defl=(i-5)/5.0*.3;
+        float defl=(i-5)/5.0*.2;
         genArcTrack(defl, 40, 40, 20, tracks[i]);
     }
     std::vector<float> times;
-    times.resize(11);
     runSim(gRenderer, tracks, 1, 1, 0, true, times);
-    for (int i=0; i<11; i++) {
-        printf("Time %d: %f\n", i, times[i]);
-    }
+    printTimes(times);
     
     int testTimer=0;
     
     while (!quit)
     {
-        //Handle events on queue
         while( SDL_PollEvent(&e) != 0 )
         {
-            //User requests quit
             if( e.type == SDL_QUIT )
             {
                 quit = true;
             }
         }
-        
-        testTimer++;
-        //Clear screen
         SDL_SetRenderDrawColor( gRenderer, 0, 0, 0, 0);
         SDL_RenderClear( gRenderer );
-        
         SDL_SetRenderDrawColor( gRenderer, 255, 255, 255, 255);
-        
-        //Draw data
         drawCurves(gRenderer, tracks);
-        
-        //Update screen
         SDL_RenderPresent( gRenderer );
     }
     
+    
     //Destroy window
     SDL_DestroyWindow( window );
-    
     //Quit SDL subsystems
     SDL_Quit();
-    
     return 0;
 }
 
-
-void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY)
-{
-    for (int y=0; y<radius+.5; y++)
-    {
-        for (int x=0; x<sqrtf(radius-y*y)+.5; x++)
-        {
-            SDL_RenderDrawPoint(renderer, centerX+x, centerY+y);
-            SDL_RenderDrawPoint(renderer, centerX-x, centerY+y);
-            SDL_RenderDrawPoint(renderer, centerX+x, centerY-y);
-            SDL_RenderDrawPoint(renderer, centerX-x, centerY-y);
-        }
-    }
-}
-
-void SDL_DrawCircle2(SDL_Renderer* renderer, float radius, float centerX, float centerY)
-{
-    int pixelArea=radius*radius;
-    int pixelCount=0;
-    SDL_Point* pointData=(SDL_Point*)malloc(sizeof(SDL_Point)*pixelArea);
-    for (int y=0; y<radius+.5; y++)
-    {
-        for (int x=0; x<sqrtf(radius-y*y)+.5; x++)
-        {
-            pointData[pixelCount]={(int)centerX+x, (int)centerY+y};
-            pointData[pixelCount+1]={(int)centerX-x, (int)centerY+y};
-            pointData[pixelCount+2]={(int)centerX+x, (int)centerY-y};
-            pointData[pixelCount+3]={(int)centerX-x, (int)centerY-y};
-            pixelCount+=4;
-        }
-    }
-    SDL_RenderDrawPoints(renderer, pointData, pixelCount);
-}
-
-void SDL_DrawCircle3(SDL_Renderer* renderer, float radius, float centerX, float centerY)
-{
-    int pixelArea=radius*radius;
-    int pixelCount=0;
-    SDL_Point* pointData=(SDL_Point*)malloc(sizeof(SDL_Point)*pixelArea);
-    for (int y=0; y<radius+.5; y++)
-    {
-        int x=sqrtf(radius*radius-y*y);
-        SDL_RenderDrawLine(renderer, -x+centerX, y+centerY, x+centerX, y+centerY);
-        SDL_RenderDrawLine(renderer, -x+centerX, -y+centerY, x+centerX, -y+centerY);
-    }
-    SDL_RenderDrawPoints(renderer, pointData, pixelCount);
-}
-
-void SDL_DrawStripedCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY, float theta)
-{
-    SDL_DrawCircle3(renderer, radius, centerX, centerY);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderDrawLine(renderer, centerX+radius*cosf(theta), centerY+radius*sinf(theta), centerX-radius*cosf(theta), centerY-radius*sinf(theta));
-    //SDL_RenderDrawLine(renderer, centerX+radius*sinf(theta), centerY-radius*cosf(theta), centerX-radius*sinf(theta), centerY+radius*cosf(theta));
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-}
-
-
-
-void drawCurve(SDL_Renderer* renderer, trackObj track)
-{
-    float distBetweenPointsInPixels=DRAW_WIDTH/(track.heightList.size()-1);
-    float drawBorderX=(SCREEN_WIDTH-DRAW_WIDTH)/2;
-    float drawBorderY=(SCREEN_HEIGHT-DRAW_HEIGHT)/2;
-    //Draw Dots
-    for (int i=0; i<track.heightList.size(); i++)
-    {
-        float pixelX=distBetweenPointsInPixels*i+drawBorderX;
-        float pixelY=(1-track.heightList[i])*DRAW_HEIGHT+drawBorderY;
-        
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_DrawCircle(renderer, DOT_WIDTH/2, pixelX, pixelY);
-    }
-    //Draw Lines
-    for (int i=1; i<track.heightList.size(); i++)
-    {
-        float thisPixelX=distBetweenPointsInPixels*i+drawBorderX;
-        float thisPixelY=(1-track.heightList[i])*DRAW_HEIGHT+drawBorderY;
-        
-        float lastPixelX=distBetweenPointsInPixels*(i-1)+drawBorderX;
-        float lastPixelY=(1-track.heightList[i-1])*DRAW_HEIGHT+drawBorderY;
-        
-        SDL_RenderDrawLine(renderer, thisPixelX, thisPixelY, lastPixelX, lastPixelY);
-    }
-}
-
-void drawCurves(SDL_Renderer* renderer, std::vector<trackObj> track)
-{
-    for (int i=0; i<track.size(); i++) {
-        drawCurve(renderer, track[i]);
-    }
-}
 
 void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, float m, float I, bool graphical, std::vector<float>& trackTimes)
 {
@@ -223,65 +108,57 @@ void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, f
         I=m*r*r/2;
     }
     
-    //Don't draw sim in realtime instead calculate it instantly
-//    if (!graphical)
-//    {
-        for (int trackNum=0; trackNum<trackList.size(); trackNum++)
+    //Make sure trackTimes list is as long as trackList
+    trackTimes.resize(trackList.size());
+    for (int trackNum=0; trackNum<trackList.size(); trackNum++)
+    {
+        
+        float vi=0;
+        float totalTime=0;
+        trackObj thisTrack=trackList[trackNum];
+        
+        for (int point=0; point<thisTrack.heightList.size()-1; point++)
         {
             
-            float vi=0;
-            float totalTime=0;
+            float thisX=(float)point/(thisTrack.heightList.size()-1)*thisTrack.width;
+            float thisY=thisTrack.heightList[point]*thisTrack.height;
             
-            trackObj thisTrack=trackList[trackNum];
-            for (int point=0; point<thisTrack.heightList.size()-1; point++)
+            float nextX=(float)(point+1)/(thisTrack.heightList.size()-1)*thisTrack.width;
+            float nextY=thisTrack.heightList[point+1]*thisTrack.height;
+            
+            float dY=nextY-thisY;
+            float dX=nextX-thisX;
+            float segLength=sqrtf(dX*dX+dY*dY);
+            float accelOnSegment=(dY/segLength)*m*G/(m+I/(r*r));
+            
+            float radicand=vi*vi-2*accelOnSegment*segLength;
+            if (radicand<0)
             {
-                float thisX=(float)point/(thisTrack.heightList.size()-1)*thisTrack.width;
-                float thisY=thisTrack.heightList[point]*thisTrack.height;
-                
-                float nextX=(float)(point+1)/(thisTrack.heightList.size()-1)*thisTrack.width;
-                float nextY=thisTrack.heightList[point+1]*thisTrack.height;
-                
-                float dY=nextY-thisY;
-                float dX=nextX-thisX;
-                float segLength=sqrtf(dX*dX+dY*dY);
-                float accelOnSegment=(dY/segLength)*m*G/(m+I/(r*r));
-                
-                float radicand=vi*vi-2*accelOnSegment*segLength;
-                if (radicand<0)
-                {
-                    //printf("Error imaginary solution for ball on slope %d on track %d, Radicand: %f, Accel: %f\n", point, trackNum, radicand, accelOnSegment);
-                    break;
-                }
-                
-                float time1OnSegment=(vi+sqrtf(radicand))/accelOnSegment;
-                float time2OnSegment=(vi-sqrtf(radicand))/accelOnSegment;
-                
-                float correctTime;
-                if (time2OnSegment<0)
-                {
-                    correctTime=time1OnSegment;
-                }
-                else
-                {
-                    correctTime=time2OnSegment;
-                }
-                
-                //Test
-//                if (trackNum==10) {
-//                    //printf("time on segment %d: %f, Vi: %f\n", point, correctTime, vi);
-//                    printf("Radicand: %f, Accel: %f, dY/L: %f\n", radicand, accelOnSegment, dY/segLength);
-//                    //printf("time1: %f, time2: %f\n", time1OnSegment, time2OnSegment);
-//                }
-                
-                totalTime+=correctTime;
-                vi+=correctTime*(-1*accelOnSegment);
+                printf("Error imaginary solution for ball on slope %d on track %d, Radicand: %f, Accel: %f\n", point, trackNum, radicand, accelOnSegment);
+                break;
             }
             
-            trackTimes[trackNum]=totalTime;
+            float time1OnSegment=(vi+sqrtf(radicand))/accelOnSegment;
+            float time2OnSegment=(vi-sqrtf(radicand))/accelOnSegment;
+            
+            float correctTime;
+            if (time2OnSegment<0)
+            {
+                correctTime=time1OnSegment;
+            }
+            else
+            {
+                correctTime=time2OnSegment;
+            }
+            
+            totalTime+=correctTime;
+            vi+=correctTime*(-1*accelOnSegment);
         }
-//    }
-//    else
-//    {
+        
+        trackTimes[trackNum]=totalTime;
+    }
+    if(graphical)
+    {
         SDL_Event e;
         int ballsRunning=(int)trackList.size();
         std::vector<trackSimProgress> progList;
@@ -326,14 +203,22 @@ void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, f
                     float segLength=0;
                     while (tRemaining>0)
                     {
-                        float thisX=(float)point/(thisTrack.heightList.size()-1)*thisTrack.width;
-                        float thisY=thisTrack.heightList[point]*thisTrack.height;
-                        float nextX=(float)(point+1)/(thisTrack.heightList.size()-1)*thisTrack.width;
-                        float nextY=thisTrack.heightList[point+1]*thisTrack.height;
+
+                        float thisX=getXPosAtAnchor(thisTrack, point);
+                        float nextX=getXPosAtAnchor(thisTrack, point+1);
+                        
+                        float thisY=getYPosAtAnchor(thisTrack, point);
+                        float nextY=getYPosAtAnchor(thisTrack, point+1);
+                        
                         dY=nextY-thisY;
                         dX=nextX-thisX;
-                        segLength=sqrtf(dX*dX+dY*dY);
+                    
+                        segLength=getTrackSegLength(thisTrack, point);
                         float segLengthRemaining=segLength-thisProg.p;
+                        
+                        //float accelOnSegment;
+                        //float time=solveTimeToRollThroughSegment(dX, dY, segLength, m, r, I, G, accelOnSegment);
+                        
                         float accelOnSegment=(dY/segLength)*m*G/(m+I/(r*r));
                         float radicand=thisProg.v*thisProg.v-2*accelOnSegment*segLengthRemaining;
                         if (radicand<=0)
@@ -394,10 +279,70 @@ void runSim(SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, f
             SDL_RenderPresent(renderer);
             
         }
-    //}
+    }
     
 }
 
+float getXPosAtAnchor(trackObj& track, int segment)
+{
+    return (float)segment/(track.heightList.size()-1)*track.width;
+}
+
+float getYPosAtAnchor(trackObj& track, int segment)
+{
+    return track.heightList[segment]*track.height;
+}
+
+float getXPosAlongTrack(trackObj& track, int segment, float distanceFromSegStart)
+{
+    float xPos;
+    float thisX=getXPosAtAnchor(track, segment);
+    
+    if (distanceFromSegStart==0) //Position is at left height anchor (thisX)
+    {
+        xPos=thisX;
+    }
+    else //Position is between anchors solve for it (thisX<pos<nextX)
+    {
+        float nextX=getXPosAtAnchor(track, segment+1);
+        float dX=nextX-thisX;
+        float segLength=getTrackSegLength(track, segment);
+        xPos=distanceFromSegStart*dX/segLength+thisX;
+    }
+    
+    return xPos;
+}
+
+float getYPosAlongTrack(trackObj& track, int segment, float distanceFromSegStart)
+{
+    float yPos;
+    float thisY=track.heightList[segment]*track.height;
+
+    if (distanceFromSegStart==0) //Position is at left height anchor (thisX)
+    {
+        yPos=thisY;
+    }
+    else //Position is between anchors solve for it (thisX<pos<nextX)
+    {
+        float nextY=track.heightList[segment+1]*track.height;
+        float dY=nextY-thisY;
+        float segLength=getTrackSegLength(track, segment);
+        yPos=distanceFromSegStart*dY/segLength+thisY;
+    }
+
+    return yPos;
+}
+
+float getTrackSegLength(trackObj& track, int seg)
+{
+    float thisX=getXPosAtAnchor(track, seg);
+    float nextX=getXPosAtAnchor(track, seg+1);
+    float thisY=getYPosAtAnchor(track, seg);
+    float nextY=getYPosAtAnchor(track, seg+1);
+    float dX=nextX-thisX;
+    float dY=nextY-thisY;
+    return sqrtf(dX*dX+dY*dY);
+}
 
 void genArcTrack(float maxDeflection, float width, float height, int res, trackObj& track)
 {
@@ -431,19 +376,6 @@ void genArcTrack(float maxDeflection, float width, float height, int res, trackO
             yPos=centerXY+sqrtf(radius*radius-powf(centerXY-xPos, 2));
         }
         
-        //printf("YPos: %f, XPos: %f, Radicand: %f, Center: %f, Radius: %f\n", yPos, xPos, radius*radius-powf(centerXY-xPos, 2), centerXY, radius);
         track.heightList[i]=yPos;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
