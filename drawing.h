@@ -21,16 +21,18 @@ struct trackObj
     float width;
 };
 
-const int SCREEN_WIDTH = 640;
-const int DRAW_WIDTH = 400;
-const int SCREEN_HEIGHT = 480;
-const int DRAW_HEIGHT = 400;
-const int DOT_WIDTH = 5;
-const int BALL_WIDTH = 7;
+extern int SCREEN_WIDTH;
+extern int DRAW_WIDTH;
+extern int SCREEN_HEIGHT;
+extern int DRAW_HEIGHT;
+extern int DOT_WIDTH;
+extern int BALL_WIDTH;
+
 
 void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY);
 void drawCurve(SDL_Renderer* renderer, trackObj track);
 void drawCurves(SDL_Renderer* renderer, std::vector<trackObj> track);
 void SDL_DrawStripedCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY, float theta);
+
 
 #endif /* defined(__WalkingNet__drawing__) */

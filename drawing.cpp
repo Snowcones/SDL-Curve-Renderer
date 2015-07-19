@@ -67,8 +67,6 @@ void drawCurves(SDL_Renderer* renderer, std::vector<trackObj> track)
     }
 }
 
-
-
 //Other ways to draw circles
 
 //void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY)
