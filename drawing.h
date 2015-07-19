@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 #include <vector>
-
 struct trackObj
 {
     //Height List is normalized
@@ -28,11 +27,9 @@ extern int DRAW_HEIGHT;
 extern int DOT_WIDTH;
 extern int BALL_WIDTH;
 
-
 void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY);
 void drawCurve(SDL_Renderer* renderer, trackObj track);
 void drawCurves(SDL_Renderer* renderer, std::vector<trackObj> track);
 void SDL_DrawStripedCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY, float theta);
-
 
 #endif /* defined(__WalkingNet__drawing__) */
