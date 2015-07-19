@@ -5,10 +5,11 @@
 #include <iostream>
 #include <sys/time.h>
 
+void genEmptyTrack(float width, float height, int res, trackObj& track);
 void genArcTrack(float maxDeflection, float width, float height, int res, trackObj& track);
 void genRandTrack(float width, float height, int res, trackObj& track);
-void genEmptyTrack(float width, float height, int res, trackObj& track);
 void genSinTrack(float deflection, float width, float height, int res,trackObj& track);
+void genCustomTrack(float width, float height, trackObj& track, std::vector<float> heights);
 
 void runSim(SDL_Window* windown, SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, float m, float I, bool graphical, std::vector<float>& trackTimes, float initialVelocity);
 float solveTimeToRollThroughSegment(float dX, float dY, float vi, float segLength, float m, float r, float I, float G, float& accel);

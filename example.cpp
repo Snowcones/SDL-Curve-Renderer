@@ -5,8 +5,6 @@ int main(int argc, const char * argv[])
     
     SDL_Window* window=NULL;
     SDL_Renderer* gRenderer=NULL;
-    SDL_Event e;
-    bool quit=false;
     
     //Initialize SDL for video
     if(SDL_Init(SDL_INIT_VIDEO)<0)
@@ -16,7 +14,7 @@ int main(int argc, const char * argv[])
     else
     {
         //Create window
-        window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
+        window = SDL_CreateWindow( "Brachistochrone AI", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
         if( window == NULL )
         {
             printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );

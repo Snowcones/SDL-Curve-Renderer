@@ -27,7 +27,6 @@ void SDL_DrawStripedCircle(SDL_Renderer* renderer, float radius, float centerX, 
     SDL_DrawCircle(renderer, radius, centerX, centerY);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderDrawLine(renderer, centerX+radius*cosf(theta), centerY+radius*sinf(theta), centerX-radius*cosf(theta), centerY-radius*sinf(theta));
-    //SDL_RenderDrawLine(renderer, centerX+radius*sinf(theta), centerY-radius*cosf(theta), centerX-radius*sinf(theta), centerY+radius*cosf(theta));
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 }
 
@@ -66,49 +65,4 @@ void drawCurves(SDL_Renderer* renderer, std::vector<trackObj> track)
         drawCurve(renderer, track[i]);
     }
 }
-
-//Other ways to draw circles
-
-//void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY)
-//{
-//    for (int y=0; y<radius+.5; y++)
-//    {
-//        for (int x=0; x<sqrtf(radius*radius-y*y)+.5; x++)
-//        {
-//            SDL_RenderDrawPoint(renderer, centerX+x, centerY+y);
-//            SDL_RenderDrawPoint(renderer, centerX-x, centerY+y);
-//            SDL_RenderDrawPoint(renderer, centerX+x, centerY-y);
-//            SDL_RenderDrawPoint(renderer, centerX-x, centerY-y);
-//        }
-//    }
-//}
-//
-//void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY)
-//{
-//    int pixelArea=radius*radius;
-//    int pixelCount=0;
-//    SDL_Point* pointData=(SDL_Point*)malloc(sizeof(SDL_Point)*pixelArea);
-//    for (int y=0; y<radius+.5; y++)
-//    {
-//        for (int x=0; x<sqrtf(radius*radius-y*y)+.5; x++)
-//        {
-//            pointData[pixelCount]={(int)centerX+x, (int)centerY+y};
-//            pointData[pixelCount+1]={(int)centerX-x, (int)centerY+y};
-//            pointData[pixelCount+2]={(int)centerX+x, (int)centerY-y};
-//            pointData[pixelCount+3]={(int)centerX-x, (int)centerY-y};
-//            pixelCount+=4;
-//        }
-//    }
-//    SDL_RenderDrawPoints(renderer, pointData, pixelCount);
-//}
-
-//void SDL_DrawCircle(SDL_Renderer* renderer, float radius, float centerX, float centerY)
-//{
-//    for (int y=0; y<radius+.5; y++)
-//    {
-//        int x=sqrtf(radius*radius-y*y);
-//        SDL_RenderDrawLine(renderer, -x+centerX, y+centerY, x+centerX, y+centerY);
-//        SDL_RenderDrawLine(renderer, -x+centerX, -y+centerY, x+centerX, -y+centerY);
-//    }
-//}
 

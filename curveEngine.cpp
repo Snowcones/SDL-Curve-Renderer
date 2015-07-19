@@ -34,81 +34,6 @@ void printTimes(std::vector<float> timeList)
     }
 }
 
-//int main(int argc, const char * argv[]) {
-//
-//    SDL_Window* window=NULL;
-//    SDL_Renderer* gRenderer=NULL;
-//    SDL_Event e;
-//    bool quit=false;
-//
-//    //Initialize SDL for video
-//    if(SDL_Init(SDL_INIT_VIDEO)<0)
-//    {
-//        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-//    }
-//    else
-//    {
-//        //Create window
-//        window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
-//        if( window == NULL )
-//        {
-//            printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
-//        }
-//        else
-//        {
-//            //Renderer is hardware accelerated and is frame rate capped
-//            gRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
-//
-//            //Update the surface
-//            SDL_UpdateWindowSurface( window );
-//        }
-//    }
-//
-//    int width=80; //meters
-//    int height=40; //meters
-//    int pointsInTrack=20;
-//    float initalVelocity=0; //m/s
-//
-//    std::vector<float> times;
-//    std::vector<trackObj> tracks;
-//    tracks.resize(11);
-//
-//    float objectMass=1;
-//    float objectRadius=1;
-//    float objectInertia=NULL; //If the moment inertia is NULL the program assumes the object is a cylinder and calculates the moment of inertia from its mass and radius
-//
-//
-//
-//    for (int t=0; t<11; t++) {
-//        float deflection=(t-5)/5.0*.2;
-//        genArcTrack(deflection, width, height, pointsInTrack, tracks[t]);
-//    }
-//    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, true, times, initalVelocity);
-//    printTimes(times);
-//
-//
-//    for (int t=0; t<11; t++)
-//    {
-//        float deflection=-.1+t/(10.0);
-//        genSinTrack(deflection, width, height, pointsInTrack, tracks[t]);
-//    }
-//    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, true, times, initalVelocity);
-//    printTimes(times);
-//
-//    for (int t=0; t<11; t++)
-//    {
-//        genRandTrack(width, height, pointsInTrack, tracks[t]);
-//    }
-//    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, true, times, initalVelocity);
-//    printTimes(times);
-//
-//    //Destroy window
-//    SDL_DestroyWindow( window );
-//    //Quit SDL subsystems
-//    SDL_Quit();
-//    return 0;
-//}
-
 
 void runSim(SDL_Window* window, SDL_Renderer* renderer, std::vector<trackObj>& trackList, float r, float m, float I, bool graphical, std::vector<float>& trackTimes, float initialVelocity)
 {
@@ -181,8 +106,6 @@ void runSim(SDL_Window* window, SDL_Renderer* renderer, std::vector<trackObj>& t
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-            //SDL_Rect drawRect={(SCREEN_WIDTH-DRAW_WIDTH)/2, (SCREEN_HEIGHT-DRAW_HEIGHT)/2, DRAW_WIDTH, DRAW_HEIGHT};
-            //SDL_RenderDrawRect(renderer, &drawRect);
             
             for (int trackNum=0; trackNum<trackList.size(); trackNum++)
             {
@@ -206,7 +129,6 @@ void runSim(SDL_Window* window, SDL_Renderer* renderer, std::vector<trackObj>& t
                         float segLength=getTrackSegLength(thisTrack, point);
                         segLengthRemaining=segLength-thisProg.p;
                         if (segLengthRemaining<0) {
-                            printf("Ran Save Feature\n");
                             thisProg.segment++;
                             thisProg.p=fabsf(segLengthRemaining);
                             segLength=getTrackSegLength(thisTrack, point);
@@ -229,7 +151,7 @@ void runSim(SDL_Window* window, SDL_Renderer* renderer, std::vector<trackObj>& t
                         float accelOnSegment;
                         float time=solveTimeToRollThroughSegment(dX, dY, segLengthRemaining, thisProg.v, m, r, I, G, accelOnSegment);
                         if (time==INT_MIN) {
-                            printf("Error imaginary solution for ball on track: %d, slope: %d\n", trackNum, point);
+                            printf("No solution for ball on track: %d, slope: %d\nThis likely means the ball doesn't pass this point\n", trackNum, point);
                             thisProg.running=false;
                             ballsRunning--;
                             break;
@@ -243,10 +165,10 @@ void runSim(SDL_Window* window, SDL_Renderer* renderer, std::vector<trackObj>& t
                             thisProg.p=0;
                             thisProg.v+=time*accelOnSegment;
                             thisProg.t+=segLengthRemaining/ballRealRadius;
+                            
                             //Ball finished track
                             if(thisProg.segment>thisTrack.heightList.size()-2)
                             {
-                                //printf("Finished\n");
                                 thisProg.running=false;
                                 ballsRunning--;
                                 break;
@@ -307,7 +229,6 @@ float solveTimeToRollThroughSegment(float dX, float dY, float segLength, float v
     {
         correctTime=time2OnSegment;
     }
-    //printf("V: %f, R: %f, A: %f, L: %f, T1: %f, T2: %f\n", vi, radicand, accel, segLength, time1OnSegment, time2OnSegment);
     return correctTime;
 }
 
@@ -370,21 +291,26 @@ float getTrackSegLength(trackObj& track, int seg)
     return sqrtf(dX*dX+dY*dY);
 }
 
-
-
-void genArcTrack(float maxDeflection, float width, float height, int res, trackObj& track)
+void genEmptyTrack(float width, float height, int res, trackObj& track)
 {
-    if (maxDeflection==0)
-    {
-        maxDeflection=.001;
-    }
-    maxDeflection*=-1;
+    
     track.heightList.resize(res);
     track.width=width;
     track.height=height;
     
     track.heightList[0]=1.0;
     track.heightList[res-1]=0.0;
+}
+
+void genArcTrack(float maxDeflection, float width, float height, int res, trackObj& track)
+{
+    genEmptyTrack(width, height, res, track);
+    
+    if (maxDeflection==0)
+    {
+        maxDeflection=.001;
+    }
+    maxDeflection*=-1;
     for (int i=1; i<res-1; i++)
     {
         float l=sqrtf(2);
@@ -406,30 +332,14 @@ void genArcTrack(float maxDeflection, float width, float height, int res, trackO
 
 void genRandTrack(float width, float height, int res, trackObj& track)
 {
-    track.heightList.resize(res);
-    track.width=width;
-    track.height=height;
-    
-    track.heightList[0]=1.0;
-    track.heightList[res-1]=0.0;
+    genEmptyTrack(width, height, res, track);
     for (int i=1; i<res-1; i++)
     {
         track.heightList[i]=(float)rand()/INT_MAX*.8+.1;
     }
 }
 
-void genEmptyTrack(float width, float height, int res, trackObj& track)
-{
-    
-    track.heightList.resize(res);
-    track.width=width;
-    track.height=height;
-    
-    track.heightList[0]=1.0;
-    track.heightList[res-1]=0.0;
-}
-
-void genCustTrack(float width, float height, trackObj& track, std::vector<float> heights)
+void genCustomTrack(float width, float height, trackObj& track, std::vector<float> heights)
 {
     track.heightList.resize(heights.size()+2);
     track.width=width;
