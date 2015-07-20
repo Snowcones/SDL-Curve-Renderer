@@ -33,6 +33,7 @@ int main(int argc, const char * argv[])
     int height=40; //meters
     int pointsInTrack=20;
     float initalVelocity=0; //m/s
+    bool isGraphical=false; //Decides if simulation will run with animation for run instantly without
     
     std::vector<float> times;
     std::vector<trackObj> tracks;
@@ -47,7 +48,7 @@ int main(int argc, const char * argv[])
         float deflection=(t-5)/5.0*.2;
         genArcTrack(deflection, width, height, pointsInTrack, tracks[t]);
     }
-    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, true, times, initalVelocity);
+    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, isGraphical, times, initalVelocity);
     printTimes(times);
     
     //Second Sim
@@ -56,7 +57,7 @@ int main(int argc, const char * argv[])
         float deflection=-.1+t/(10.0);
         genSinTrack(deflection, width, height, pointsInTrack, tracks[t]);
     }
-    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, true, times, initalVelocity);
+    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, isGraphical, times, initalVelocity);
     printTimes(times);
     
     //Third Sim
@@ -64,7 +65,7 @@ int main(int argc, const char * argv[])
     {
         genRandTrack(width, height, pointsInTrack, tracks[t]);
     }
-    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, true, times, initalVelocity);
+    runSim(window, gRenderer, tracks, objectRadius, objectMass, objectInertia, isGraphical, times, initalVelocity);
     printTimes(times);
     
     //Destroy window
